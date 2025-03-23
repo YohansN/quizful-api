@@ -9,7 +9,14 @@ export class UserController {
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
+    const newUser = this.userService.create(createUserDto);
+    return {
+      message: "Usuário criado com sucesso!",
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+      },
+    };
   }
 
   @Get()
