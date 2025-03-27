@@ -37,8 +37,20 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     this.server.to(roomId).emit("log", data);
   }
 
-  @SubscribeMessage('create_room')
-  handleEventCreateRoom(@MessageBody() roomName: string , @ConnectedSocket() client: Socket) {
+  @SubscribeMessage('create_quiz')
+  async handleEventCreateQuiz(@MessageBody() data: { theme: string; numQuestions: number }, @ConnectedSocket() client: Socket) {
+    const { theme, numQuestions } = data;
+    console.log(`SERVIDOR: Criando quiz com tema: ${theme} e número de questões: ${numQuestions}`);
+    const quiz = await this.quizService.generateQuiz(data.theme, data.numQuestions, client.id);
+    const roomId = `quiz-${quiz.id}-${Date.now()}`;
+
+    await this.handleEventCreateRoom(roomId, client); // Create a room for the quiz
+
+    this.server.to(roomId).emit('quiz_data', quiz); // Send the quiz data to the room
+  }
+
+  //@SubscribeMessage('create_room') - Vai ser feito pelo outro evento
+  async handleEventCreateRoom(@MessageBody() roomName: string , @ConnectedSocket() client: Socket) {
 
     // Check if the room already exists
     const roomExists = this.server.sockets.adapter.rooms.has(roomName);

@@ -6,13 +6,13 @@ import { Question, Quiz } from './entities/quiz.entity';
 export class QuizService {
   constructor(private readonly LlmService: LlmService) {}
 
-  async generateQuiz(theme: string, numQuestions: number) {
+  async generateQuiz(theme: string, numQuestions: number, userId: string) {
       const questionsData = await this.LlmService.generateQuizQuestions(theme, numQuestions);
       
       const questions = questionsData.map((q: any) => new Question(q));
       
       // Criar objeto Quiz com as perguntas geradas
-      const quiz = new Quiz(theme, numQuestions, questions, 'mock_user_id');
+      const quiz = new Quiz(theme, numQuestions, questions, userId);
       // TODO
       // Salvar no banco de dados
       //Retorna o objeto Quiz para o user 
