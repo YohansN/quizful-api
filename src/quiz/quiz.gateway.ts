@@ -20,6 +20,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     // Log the total number of connected clients
     const totalConnections = this.server.sockets.sockets.size;
     console.log(`Total de conexões ativas: ${totalConnections}`);
+
+    const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
+        .filter(room => !this.server.sockets.adapter.sids.has(room));
+    socket.emit('list_rooms', { rooms });
   }
 
   handleDisconnect(socket: Socket) {
