@@ -8,6 +8,6 @@ export class QuizController {
 
     @Get()
     getQuiz() {
-        return this.quizService.generateQuiz("História do Brasil", 2);
+        return this.quizService.generateQuiz("Análise sintática", 2, "euu");
     }
 }
