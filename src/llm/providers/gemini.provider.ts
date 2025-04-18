@@ -1,5 +1,6 @@
 import { Question } from 'src/quiz/entities/quiz.entity';
 import { LLMProvider } from '../llm.interface';
+import { v4 as uuidv4 } from 'uuid';
 const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
 
 export class GeminiLLM implements LLMProvider {
@@ -14,7 +15,7 @@ export class GeminiLLM implements LLMProvider {
         items: {
           type: SchemaType.OBJECT,
           properties: {
-            id: { type: SchemaType.STRING, description: "ID único da pergunta" },
+            displayId: { type: SchemaType.STRING, description: "ID único da pergunta (q1, q2, q3 ...)" },
             question: { type: SchemaType.STRING, description: "Texto da pergunta" },
             options: {
               type: SchemaType.ARRAY,
@@ -30,7 +31,7 @@ export class GeminiLLM implements LLMProvider {
             },
             justification: { type: SchemaType.STRING, description: "Explicação da resposta correta" },
           },
-          required: ["id", "question", "options", "justification"],
+          required: ["displayId", "question", "options", "justification"],
         },
       },
     },
@@ -50,10 +51,12 @@ private readonly model = this.genAI.getGenerativeModel({
     const result = await this.model.generateContent(prompt);
     const parsedResponse = JSON.parse(result.response.text());
 
-    return parsedResponse.questions.map((q: any) => ({
-      id: q.id,
+    return parsedResponse.questions.map((q: any, index: number) => ({
+      id: uuidv4(),
+      displayId: `q${index + 1}`, // q1, q2, q3...
       question: q.question,
       options: q.options.map((opt: any) => ({
+        id: uuidv4(),
         letter: opt.letter,
         text: opt.text,
         correctAnswer: opt.correctAnswer,
