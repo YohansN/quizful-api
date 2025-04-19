@@ -21,9 +21,13 @@ export class AuthService {
         if (hashedPassword === userFound.password) {
             //console.log(userFound);
             const { password: _, passwordSalt, ...safeUser } = userFound;
-            return this.jwtService.sign(safeUser);
+            return safeUser;
         }
-            
-        
+    }
+
+    async login(user: any) { //Gera o token com o usuário já validado
+        return {
+            access_token: this.jwtService.sign(user),
+        };
     }
 }
