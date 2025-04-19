@@ -5,12 +5,14 @@ export class User {
   username: string;
   email: string;
   passwordHash: string;
+  passwordSalt: string;
   quizzes: string[]; // Lista de IDs de quizzes associados ao usuário
 
   constructor(username: string, email: string, password: string) {
     this.username = username;
     this.email = email;
     this.id = this.generateId(email);
+    this.passwordSalt = randomBytes(16).toString("hex");
     this.passwordHash = this.hashPassword(password);
     this.quizzes = [];
   }
@@ -24,7 +26,7 @@ export class User {
   }
 
   private hashPassword(password: string): string {
-    const salt = randomBytes(16).toString("hex");
+    const salt = this.passwordSalt;
     return createHash("sha256").update(password + salt).digest("hex");
   }
 

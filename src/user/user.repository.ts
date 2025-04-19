@@ -5,13 +5,14 @@ import { PrismaService } from '../prisma/prisma.service'; // ajuste o caminho
 export class UserRepository{
     constructor(private readonly PrismaService: PrismaService) {}
     
-    async createUser(id: string, username: string, email: string, password: string) {
+    async createUser(id: string, username: string, email: string, password: string, passwordSalt: string) {
         const user = await this.PrismaService.user.create({
         data: {
             id,
             username,
             email,
             password,
+            passwordSalt,
         },
         });
         return;

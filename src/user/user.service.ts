@@ -15,7 +15,7 @@ export class UserService {
       }
     });
     const newUser = new User(createUserDto.username, createUserDto.email, createUserDto.password);
-    await this.userRepository.createUser(newUser.id, newUser.username, newUser.email, newUser.passwordHash);
+    await this.userRepository.createUser(newUser.id, newUser.username, newUser.email, newUser.passwordHash, newUser.passwordSalt);
     return newUser;
   }
 
