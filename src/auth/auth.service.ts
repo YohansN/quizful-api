@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { AuthPayloadDto } from './dto/auth.dto';
 import { UserService } from 'src/user/user.service';
 import { createHash } from 'crypto';
@@ -11,7 +11,7 @@ export class AuthService {
     async validateUser({email, password}: AuthPayloadDto) {
         const userFound = await this.userService.findOneByEmail(email);
          if (!userFound) {
-            return null;
+            throw new HttpException('User not found', 404);
         }
 
         const hashedPassword = createHash("sha256")
@@ -23,6 +23,7 @@ export class AuthService {
             const { password: _, passwordSalt, ...safeUser } = userFound;
             return safeUser;
         }
+        throw new HttpException('Invalid credentials', 401);
     }
 
     async login(user: any) { //Gera o token com o usuário já validado
