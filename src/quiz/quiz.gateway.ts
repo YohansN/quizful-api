@@ -16,6 +16,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   private quizManagers = new Map<string, QuizManager>(); // Associa salas aos QuizManagers
   private quizRooms = new Map<string, Quiz>(); // Associa um quiz a um room
 
+  // --- SET UP SOCKET.IO ---
+
   @WebSocketServer()
   server: Server;
 
@@ -60,6 +62,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     });
   }
 
+  // --- END SET UP SOCKET.IO ---
+
+  // --- SOCKET.IO MSGS ---  
+
   @SubscribeMessage('for_all_msg')
   handleEventForAll(@MessageBody() body: any) {
     this.server.emit("log", {mensagem: body})
@@ -71,7 +77,11 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     this.server.to(roomId).emit("log", message);
   }
 
-  @SubscribeMessage('create_quiz')
+  // --- END SOCKET.IO MSGS ---
+
+
+  // --- START SOCKET QUIZ ROOM EVENTS ---
+  @SubscribeMessage('create_quiz') // Criar quiz, associa a sala e o quizManager, envia o quizId para o front pelas lista de salas.
   async handleEventCreateQuiz(@MessageBody() data: { theme: string; numQuestions: number }, @ConnectedSocket() client: Socket) {
     const { theme, numQuestions } = data;
     console.log(`SERVIDOR: Criando quiz com tema: ${theme} e número de questões: ${numQuestions}`);
@@ -91,40 +101,15 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     this.server.emit("list_rooms", { rooms });
   }
 
-  //Função inutilizada - remover
-  //@SubscribeMessage('create_room') - Vai ser feito pelo outro evento
-  async handleEventCreateRoom(@MessageBody() roomName: string , @ConnectedSocket() client: Socket) {
-
-    // Check if the room already exists
-    const roomExists = this.server.sockets.adapter.rooms.has(roomName);
-
-    if (roomExists) {
-      // Send an error message to the client
-      client.emit("log", { mensagem: `Room ${roomName} already exists. Cannot create.` });
-    } else {
-      this.quizManagers.set(roomName, new QuizManager(roomName)); //Iniciando uma instância de quizManager p/ essa sala
-      // TROCAR POSTERIORMENTE PARA ADICIONAR JOGADOR NA SALA APENAS QUANDO ENTRAR PELA TELA DO FRONT
-      client.join(roomName); // Add the client to the specified room
-      this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: client.id, name: `Player-${client.id}` })
-
-      // Emit a message to the room confirming its creation
-      this.server.to(roomName).emit("log", { mensagem: `Room ${roomName} created and joined by ${client.id}` });
-
-      // Emit the list of all rooms
-      const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
-        .filter(room => !this.server.sockets.adapter.sids.has(room)); // Exclude individual socket IDs
-      this.server.emit("list_rooms", { rooms });
-    }
-  }
-
   @SubscribeMessage('join_room')
-  handleEventJoinRoom(@MessageBody() roomName: string , @ConnectedSocket() client: Socket) {
+  handleEventJoinRoom(@MessageBody() data:{ roomName: string, username: string, userId: string } , @ConnectedSocket() client: Socket) {
     //const roomExists = this.server.sockets.adapter.rooms.has(roomName);
+    const { roomName, username, userId } = data;
     const roomExists = this.quizRooms.get(roomName);
     if (roomExists) {
       client.join(roomName); //Adicionar o usuário na sala socket
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
-      this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: client.id, name: `Player-${client.id}` })
+      this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username });
             
       this.server.to(roomName).emit("log", { mensagem: `${client.id} joined room ${roomName}!` });
     }
@@ -132,6 +117,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
       client.emit("log", { mensagem: `Room ${roomName} dosn't exists. Cannot join.` });
     }
   }
+
+  // --- END SOCKET QUIZ ROOM EVENTS ---
+
+  // --- START AUXILIAR EVENTS ---
 
   @SubscribeMessage('list_players_on_room')
   handleEventListPlayersOnRoom(@MessageBody() roomId: string){
@@ -147,6 +136,17 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const roomExists = this.quizRooms.has(roomId);
     console.log(roomExists);
     this.server.emit('room_exists', roomExists);
+  }
+
+  @SubscribeMessage('start_quiz')
+  handleEventStartQuiz(@MessageBody() roomId: string) {
+    console.log('Cliente pedindo Quiz para a sala: ', roomId);
+    const quiz = this.quizRooms.get(roomId);
+    if (quiz) {
+      this.server.to(roomId).emit("send_quiz", quiz);
+    } else {
+      console.log(`SERVIDOR: QuizManager não encontrado para a sala ${roomId}`);
+    }
   }
 
 }
