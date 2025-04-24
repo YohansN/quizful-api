@@ -38,7 +38,7 @@ export class QuizRepository {
                 },
             },
         });
-        //return quiz;
+        return quiz;
     }
 
     async findOneById(id: string) {

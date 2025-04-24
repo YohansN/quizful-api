@@ -4,6 +4,8 @@ import { Question, Quiz } from './entities/quiz.entity';
 // import { PrismaService } from 'src/prisma/prisma.service';
 import { QuizRepository } from './quiz.repository';
 import { validate as isUuid } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
+
 
 @Injectable()
 export class QuizService {
@@ -23,10 +25,10 @@ export class QuizService {
     //console.log(quiz); 
 
     // Salvar no banco de dados
-    await this.QuizRepository.create(quiz);
+    const savedQuiz = await this.QuizRepository.create(quiz);
 
     //Retorna o objeto Quiz para o user 
-    return quiz;
+    return savedQuiz;
   }
 
   async findOneById(id: string) {

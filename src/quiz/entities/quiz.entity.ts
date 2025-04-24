@@ -1,4 +1,5 @@
 import { v5 as uuidv5 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
 
 export class Option {
   id: string;
@@ -42,14 +43,7 @@ export class Quiz {
     this.numQuestions = numQuestions;
     this.questions = questions;
     this.creator_ID = creator_ID;
-    this.id = this.generateId(theme, numQuestions);
+    this.id = uuidv4();
   }
 
-  private generateId(theme: string, numQuestions: number): string {
-    const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
-    const id = `${theme}-${numQuestions}`;
-    const hashedId = uuidv5(id, NAMESPACE);
-    console.log(`Quiz-ID: ${hashedId}`);
-    return hashedId;
-  }
 }
