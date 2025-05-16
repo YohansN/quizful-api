@@ -2,7 +2,7 @@ import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, OnGat
 import { QuizService } from './quiz.service';
 import { Server, Socket } from 'socket.io';
 import { LlmService } from '../llm/llm.service';
-import { QuizManager } from './managers/quiz.manager';
+import { QuizManager, QuizStatus } from './managers/quiz.manager';
 import { Quiz } from './entities/quiz.entity';
 
 @WebSocketGateway({
@@ -111,7 +111,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
       client.join(roomName); //Adicionar o usuário na sala socket
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
       this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username });
-            
+      this.server.to(roomName).emit("quiz_status", this.quizManagers.get(roomName)?.quizStatus);
+      console.log('quizManager: ', this.quizManagers.get(roomName));
       this.server.to(roomName).emit("log", { mensagem: `${client.id} joined room ${roomName}!` });
     }
     else{
@@ -148,6 +149,14 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     } else {
       console.log(`SERVIDOR: QuizManager não encontrado para a sala ${roomId}`);
     }
+  }
+
+  @SubscribeMessage('change_quiz_status')
+  handleEventChangeQuizStatus(@MessageBody() data: { roomId: string, quizStatus: QuizStatus }){
+    const { roomId, quizStatus } = data;
+    this.quizManagers.get(roomId)?.changeQuizStatus(quizStatus);
+    this.server.to(roomId).emit("quiz_status", this.quizManagers.get(roomId)?.quizStatus);
+    console.log('quizManager: ', this.quizManagers.get(roomId)); //Verificação do manager da sala
   }
 
 }
