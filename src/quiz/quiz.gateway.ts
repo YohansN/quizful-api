@@ -86,7 +86,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const { theme, numQuestions } = data;
     console.log(`SERVIDOR: Criando quiz com tema: ${theme} e número de questões: ${numQuestions}`);
     const quiz = await this.quizService.generateQuiz(data.theme, data.numQuestions, client.id);
-    const roomId = `quiz-${quiz.id}-${Date.now()}`;
+    // const roomId = `quiz-${quiz.id}-${Date.now()}`;
+    const roomId = `quiz-${Date.now()}`;
 
     // AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI  
 
