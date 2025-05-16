@@ -34,4 +34,8 @@ export class QuizManager {
         return this.activePlayers;
     }
 
+    changeQuizStatus(status: QuizStatus) {
+        this.quizStatus = status
+    }
+
   }
