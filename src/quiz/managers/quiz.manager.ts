@@ -15,6 +15,7 @@ export class QuizManager {
     roomId: string;
     quizStatus: QuizStatus;
     private activePlayers: Player[] = [];
+    questionIndex: number = 0;
 
     constructor(roomId: string) {
         this.roomId = roomId;
@@ -36,6 +37,10 @@ export class QuizManager {
 
     changeQuizStatus(status: QuizStatus) {
         this.quizStatus = status
+    }
+
+    setQuestionIndex(index: number) {
+        this.questionIndex = index;
     }
 
   }
