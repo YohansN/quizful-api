@@ -151,12 +151,45 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     }
   }
 
+  @SubscribeMessage('get_quiz_again') //Reenvia quiz para usuario reconectado
+  handleEventResendQuiz(@MessageBody() roomId: string, @ConnectedSocket() client: Socket) {
+    console.log("Client reconectou e pediu o quiz novamente.");
+    const quiz = this.quizRooms.get(roomId);
+    if (quiz) {
+      client.emit("resend_quiz", quiz);
+    } else {
+      console.log(`SERVIDOR: QuizManager não encontrado para a sala ${roomId}`);
+    }
+  }
+
+  @SubscribeMessage('get_quiz_status')
+  handleEventGetQuizStatus(@MessageBody() data: { roomId: string }, @ConnectedSocket() client: Socket){
+    console.log("Rodando GET QUIZ STATUS");
+    const { roomId } = data;
+    client.emit("quiz_status", this.quizManagers.get(roomId)?.quizStatus);
+  }
+
   @SubscribeMessage('change_quiz_status')
   handleEventChangeQuizStatus(@MessageBody() data: { roomId: string, quizStatus: QuizStatus }){
     const { roomId, quizStatus } = data;
     this.quizManagers.get(roomId)?.changeQuizStatus(quizStatus);
-    this.server.to(roomId).emit("quiz_status", this.quizManagers.get(roomId)?.quizStatus);
+    this.server.to(roomId).emit("new_quiz_status", this.quizManagers.get(roomId)?.quizStatus);
     console.log('quizManager: ', this.quizManagers.get(roomId)); //Verificação do manager da sala
+  }
+
+  @SubscribeMessage('current_question') // Para atualizar a questão atual apenas para jogadores que recarregarem a página.
+  handleEventCurrentQuestion(@MessageBody() data: {roomId: string}, @ConnectedSocket() client: Socket) {
+    const { roomId } = data;
+    const currentQuestionIndex = this.quizManagers.get(roomId)?.questionIndex;
+    client.emit("updated_current_question_index", currentQuestionIndex);
+    // this.server.to(roomId).emit("", currentQuestionIndex); //precisa retornar o index da questão atual apenas para o jogador q pediu!!
+  }
+
+  @SubscribeMessage('next_question')
+  handleEventNextQuestion(@MessageBody() data: { roomId: string, currentQuestion: number }) {
+    const { roomId, currentQuestion } = data;
+    this.quizManagers.get(roomId)?.setQuestionIndex(currentQuestion + 1);
+    this.server.to(roomId).emit("new_current_question", currentQuestion + 1);
   }
 
 }
