@@ -206,12 +206,35 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const question = manager.quiz.questions[questionIndex];
     const numericCorrectOption = Number.parseInt(question.correctOption); //TODO: Modificar question.correctOption para ser o index da opção correta.
     const isCorrect = numericCorrectOption === selectedOption;
+
+    // Adiciona a resposta ao histórico do jogador
+    player.answers.push({
+      questionIndex,
+      selectedOption,
+      isCorrect,
+    });
+
     if (isCorrect) {
       manager.addPointsToPlayer(username, 1);
       console.log(`Jogador ${username} respondeu corretamente a questão ${questionIndex + 1}.`);
     }
     else {
       console.log(`Jogador ${username} respondeu incorretamente a questão ${questionIndex + 1}.`);
+    }
+
+    if(manager.haveAllPlayersAnsweredCurrentQuestion()) { //Passa a questão caso todos os jogadores já tenham respondido.
+      console.log(`Todos os jogadores responderam a questão ${questionIndex + 1}.`);
+      // TODO: Chamar tela intermediaria de resultados entre questões
+      if (manager.questionIndex < manager.quiz.numQuestions - 1) { //Verifica se ainda há questões antes de passar para a próxima.
+        this.handleEventNextQuestion({
+          roomId,
+          currentQuestion: questionIndex
+        });
+      }
+      // else {
+      //   // TODO: chamar tela de resultados
+      // }
+      
     }
 
   }
