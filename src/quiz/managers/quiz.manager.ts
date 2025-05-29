@@ -23,7 +23,7 @@ export interface Player{
 export class QuizManager {
     roomId: string;
     quizStatus: QuizStatus;
-    private activePlayers: Player[] = [];
+    private activePlayers: Map<string, Player> = new Map();
     questionIndex: number = 0;
     quiz: Quiz;
 
@@ -34,16 +34,41 @@ export class QuizManager {
     }
 
     addPlayer(player: Player) {
-        this.activePlayers.push(player);
-        console.log(`Player: ${player.name} adicionado na sala ${this.roomId}`)
+        const existingPlayer = this.activePlayers.get(player.name);
+
+        if (existingPlayer) {
+            existingPlayer.socketId = player.socketId; //Atualiza o socketId do jogador existente
+            console.log(`Jogador ${existingPlayer.name} reconectado na sala ${this.roomId}`);
+        } else {
+            this.activePlayers.set(player.name, player);
+            console.log(`Jogador novo ${player.name} adicionado na sala ${this.roomId}`);
+        }
     }
 
     removePlayer(socketId: string) {
-        this.activePlayers = this.activePlayers.filter(player => player.socketId !== socketId);
+        for (const [username, player] of this.activePlayers.entries()) {
+            if (player.socketId === socketId) {
+                player.socketId = ""; // marca como offline
+                console.log(`Jogador desconectado: ${player.name}`);
+                break;
+            }
+        }
     }
     
     listPlayers() {
-        return this.activePlayers;
+        return Array.from(this.activePlayers.values());
+    }
+
+    getPlayerByUsername(username: string): Player | undefined {
+        return this.activePlayers.get(username);
+    }
+
+    addPointsToPlayer(username: string, points: number){
+        const player = this.getPlayerByUsername(username);
+        if (player) {   
+            player.score += points;
+            console.log(`Jogador: ${player.name} ganhou ${points} pontos. Pontuação total: ${player.score}`);
+        }
     }
 
     changeQuizStatus(status: QuizStatus) {
