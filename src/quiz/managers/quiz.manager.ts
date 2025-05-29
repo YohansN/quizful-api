@@ -79,4 +79,19 @@ export class QuizManager {
         this.questionIndex = index;
     }
 
+    haveAllPlayersAnsweredCurrentQuestion(): boolean {
+        console.log("Verificando se todos os jogadores responderam a pergunta atual...");
+        for (const player of this.activePlayers.values()) {
+            const alreadyAnswered = player.answers.some(
+                answer => answer.questionIndex === this.questionIndex
+            );
+            if (!alreadyAnswered) {
+                console.log("Ainda falta alguem");
+                return false; // Pelo menos um jogador não respondeu ainda
+            }
+        }
+        return true;
+    }
+
+
 }
