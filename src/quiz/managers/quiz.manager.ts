@@ -1,3 +1,4 @@
+import { Quiz } from "../entities/quiz.entity";
 
 export enum QuizStatus {
     WaitingForPlayersToJoinQuiz,
@@ -5,10 +6,18 @@ export enum QuizStatus {
     QuizEnded
 }
 
+export interface PlayerAnswer {
+    questionIndex: number;
+    selectedOption: number;
+    isCorrect: boolean;
+}
+
 export interface Player{
     socketId: string;
     id: string;
     name: string;
+    answers: PlayerAnswer[];
+    score: number;
 }
 
 export class QuizManager {
@@ -16,10 +25,12 @@ export class QuizManager {
     quizStatus: QuizStatus;
     private activePlayers: Player[] = [];
     questionIndex: number = 0;
+    quiz: Quiz;
 
-    constructor(roomId: string) {
+    constructor(roomId: string, quiz: Quiz) {
         this.roomId = roomId;
         this.quizStatus = QuizStatus.WaitingForPlayersToJoinQuiz;
+        this.quiz = quiz;
     }
 
     addPlayer(player: Player) {
@@ -43,4 +54,4 @@ export class QuizManager {
         this.questionIndex = index;
     }
 
-  }
+}

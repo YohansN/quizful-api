@@ -93,7 +93,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
 
     //await this.handleEventCreateRoom(roomId, client); // Create a room for the quiz
     this.quizRooms.set(roomId, quiz); //Save the quiz associate w/ the room
-    this.quizManagers.set(roomId, new QuizManager(roomId));
+    this.quizManagers.set(roomId, new QuizManager(roomId, quiz));
     console.log(`SERVIDOR: Room criada com id: ${roomId}`);
     //this.server.to(roomId).emit('quiz_data', quiz); // Send the quiz data to the room
 
@@ -110,7 +110,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     if (roomExists) {
       client.join(roomName); //Adicionar o usuário na sala socket
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
-      this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username });
+      this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username, answers: [], score: 0 });
       this.server.to(roomName).emit("quiz_status", this.quizManagers.get(roomName)?.quizStatus);
       console.log('quizManager: ', this.quizManagers.get(roomName));
       this.server.to(roomName).emit("log", { mensagem: `${client.id} joined room ${roomName}!` });
@@ -143,7 +143,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   @SubscribeMessage('start_quiz')
   handleEventStartQuiz(@MessageBody() roomId: string) {
     console.log('Cliente pedindo Quiz para a sala: ', roomId);
-    const quiz = this.quizRooms.get(roomId);
+    const quiz = this.quizManagers.get(roomId)?.quiz;
     if (quiz) {
       this.server.to(roomId).emit("send_quiz", quiz);
     } else {
@@ -154,7 +154,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   @SubscribeMessage('get_quiz_again') //Reenvia quiz para usuario reconectado
   handleEventResendQuiz(@MessageBody() roomId: string, @ConnectedSocket() client: Socket) {
     console.log("Client reconectou e pediu o quiz novamente.");
-    const quiz = this.quizRooms.get(roomId);
+    const quiz = this.quizManagers.get(roomId)?.quiz;
     if (quiz) {
       client.emit("resend_quiz", quiz);
     } else {
