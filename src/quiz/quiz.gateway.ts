@@ -185,6 +185,37 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     // this.server.to(roomId).emit("", currentQuestionIndex); //precisa retornar o index da questão atual apenas para o jogador q pediu!!
   }
 
+  @SubscribeMessage('answer_question')
+  handleEventAnswerQuestion(@MessageBody() data: { roomId: string, username: string, questionIndex: number, selectedOption: number }, @ConnectedSocket() client: Socket) {
+    const { roomId, username, questionIndex, selectedOption } = data;
+
+    const manager = this.quizManagers.get(roomId);
+    
+    if (!manager) {
+      console.error(`QuizManager não encontrado para a sala ${roomId}`);
+      return;
+    }
+
+    const player = manager.getPlayerByUsername(username);
+
+    if (!player) {
+      console.error(`Jogador ${username} não encontrado na sala ${roomId}`);
+      return;
+    }
+
+    const question = manager.quiz.questions[questionIndex];
+    const numericCorrectOption = Number.parseInt(question.correctOption); //TODO: Modificar question.correctOption para ser o index da opção correta.
+    const isCorrect = numericCorrectOption === selectedOption;
+    if (isCorrect) {
+      manager.addPointsToPlayer(username, 1);
+      console.log(`Jogador ${username} respondeu corretamente a questão ${questionIndex + 1}.`);
+    }
+    else {
+      console.log(`Jogador ${username} respondeu incorretamente a questão ${questionIndex + 1}.`);
+    }
+
+  }
+
   @SubscribeMessage('next_question')
   handleEventNextQuestion(@MessageBody() data: { roomId: string, currentQuestion: number }) {
     const { roomId, currentQuestion } = data;
