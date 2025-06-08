@@ -231,9 +231,12 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
           currentQuestion: questionIndex
         });
       }
-      // else {
-      //   // TODO: chamar tela de resultados
-      // }
+      else { // Muda o status do quiz, fazendo o client chamar o scoreboard.
+        this.handleEventChangeQuizStatus({
+          roomId,
+          quizStatus: QuizStatus.QuizEnded,
+        });
+      }
       
     }
 
@@ -244,6 +247,13 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const { roomId, currentQuestion } = data;
     this.quizManagers.get(roomId)?.setQuestionIndex(currentQuestion + 1);
     this.server.to(roomId).emit("new_current_question", currentQuestion + 1);
+  }
+
+  @SubscribeMessage('get_scoreboard')
+  handleEventGetScoreboard(@MessageBody() data: { roomId: string}) {
+    const { roomId } = data;
+    const scoreboard = this.quizManagers.get(roomId)?.getScoreboard();
+    this.server.to(roomId).emit("scoreboard", scoreboard);
   }
 
 }

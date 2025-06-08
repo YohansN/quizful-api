@@ -93,5 +93,12 @@ export class QuizManager {
         return true;
     }
 
+    getScoreboard(): { name: string; score: number }[] {
+        const scoreboard: { name: string; score: number }[] = [];
+        for (const player of this.activePlayers.values()) {
+            scoreboard.push({ name: player.name, score: player.score });
+        }
+        return scoreboard.sort((a, b) => b.score - a.score); // Ordena do maior para o menor
+    }
 
 }
