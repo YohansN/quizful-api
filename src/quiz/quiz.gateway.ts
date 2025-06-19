@@ -86,16 +86,13 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const { theme, numQuestions } = data;
     console.log(`SERVIDOR: Criando quiz com tema: ${theme} e número de questões: ${numQuestions}`);
     const quiz = await this.quizService.generateQuiz(data.theme, data.numQuestions, client.id);
-    // const roomId = `quiz-${quiz.id}-${Date.now()}`;
-    const roomId = `quiz-${Date.now()}`;
+    const roomId = `quiz-${Date.now()}`; // TODO: Melhorar a geração de ID para ser menor.
 
-    // AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI - AS MUDANÇAS DE HOJE COMEÇAM AQUI  
-
-    //await this.handleEventCreateRoom(roomId, client); // Create a room for the quiz
     this.quizRooms.set(roomId, quiz); //Save the quiz associate w/ the room
     this.quizManagers.set(roomId, new QuizManager(roomId, quiz));
     console.log(`SERVIDOR: Room criada com id: ${roomId}`);
-    //this.server.to(roomId).emit('quiz_data', quiz); // Send the quiz data to the room
+    // TODO: Envia os meta-dados do quiz para o front: Tema e Código da sala
+    client.emit("quiz_info", {quizTheme: quiz.theme, roomId: roomId}); //So deve rodar quando o quiz estiver pronto.
 
     const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
     .filter(roomId => !this.server.sockets.adapter.sids.has(roomId)); // Exclude individual socket IDs
