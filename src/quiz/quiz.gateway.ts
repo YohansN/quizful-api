@@ -82,14 +82,14 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
 
   // --- START SOCKET QUIZ ROOM EVENTS ---
   @SubscribeMessage('create_quiz') // Criar quiz, associa a sala e o quizManager, envia o quizId para o front pelas lista de salas.
-  async handleEventCreateQuiz(@MessageBody() data: { theme: string; numQuestions: number }, @ConnectedSocket() client: Socket) {
-    const { theme, numQuestions } = data;
+  async handleEventCreateQuiz(@MessageBody() data: { theme: string, numQuestions: number, quizAdmin: string }, @ConnectedSocket() client: Socket) {
+    const { theme, numQuestions, quizAdmin } = data;
     console.log(`SERVIDOR: Criando quiz com tema: ${theme} e número de questões: ${numQuestions}`);
     const quiz = await this.quizService.generateQuiz(data.theme, data.numQuestions, client.id);
     const roomId = `quiz-${Date.now()}`; // TODO: Melhorar a geração de ID para ser menor.
 
     this.quizRooms.set(roomId, quiz); //Save the quiz associate w/ the room
-    this.quizManagers.set(roomId, new QuizManager(roomId, quiz));
+    this.quizManagers.set(roomId, new QuizManager(roomId, quiz, quizAdmin));
     console.log(`SERVIDOR: Room criada com id: ${roomId}`);
     // TODO: Envia os meta-dados do quiz para o front: Tema e Código da sala
     client.emit("quiz_info", {quizTheme: quiz.theme, roomId: roomId}); //So deve rodar quando o quiz estiver pronto.
@@ -109,6 +109,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
       this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username, answers: [], score: 0 });
       this.server.to(roomName).emit("quiz_status", this.quizManagers.get(roomName)?.quizStatus);
+      client.emit("quiz_admin", this.quizManagers.get(roomName)?.quizAdmin) // Envia o nome do criador do quiz. 
       console.log('quizManager: ', this.quizManagers.get(roomName));
       this.server.to(roomName).emit("log", { mensagem: `${client.id} joined room ${roomName}!` });
     }
