@@ -218,25 +218,32 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     else {
       console.log(`Jogador ${username} respondeu incorretamente a questão ${questionIndex + 1}.`);
     }
-
+    
+    // TODO: Mandar informações de acerto/errado para o front.
+    const feedback: Object = {
+      numericCorrectOption, // Mostra a opção correta na tela
+      isCorrect, // Indica qual toast notification ativar
+    }
+    client.emit("question_feedback", feedback);
+    
     if(manager.haveAllPlayersAnsweredCurrentQuestion()) { //Passa a questão caso todos os jogadores já tenham respondido.
       console.log(`Todos os jogadores responderam a questão ${questionIndex + 1}.`);
       // TODO: Chamar tela intermediaria de resultados entre questões
-      if (manager.questionIndex < manager.quiz.numQuestions - 1) { //Verifica se ainda há questões antes de passar para a próxima.
-        this.handleEventNextQuestion({
-          roomId,
-          currentQuestion: questionIndex
-        });
-      }
-      else { // Muda o status do quiz, fazendo o client chamar o scoreboard.
-        this.handleEventChangeQuizStatus({
-          roomId,
-          quizStatus: QuizStatus.QuizEnded,
-        });
-      }
-      
+      setTimeout(() => {
+        if (manager.questionIndex < manager.quiz.numQuestions - 1) { //Verifica se ainda há questões antes de passar para a próxima.
+          this.handleEventNextQuestion({
+            roomId,
+            currentQuestion: questionIndex
+          });
+        }
+        else { // Muda o status do quiz, fazendo o client chamar o scoreboard.
+          this.handleEventChangeQuizStatus({
+            roomId,
+            quizStatus: QuizStatus.QuizEnded,
+          });
+        }
+      }, 5000); //Delay para dar feedback visual aos jogadores antes de passar para a próxima questão.
     }
-
   }
 
   @SubscribeMessage('next_question')
