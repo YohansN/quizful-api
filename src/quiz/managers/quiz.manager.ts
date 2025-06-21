@@ -26,11 +26,13 @@ export class QuizManager {
     private activePlayers: Map<string, Player> = new Map();
     questionIndex: number = 0;
     quiz: Quiz;
+    quizAdmin: string = ""; //username do criador do quiz
 
-    constructor(roomId: string, quiz: Quiz) {
+    constructor(roomId: string, quiz: Quiz, quizAdmin: string) {
         this.roomId = roomId;
         this.quizStatus = QuizStatus.WaitingForPlayersToJoinQuiz;
         this.quiz = quiz;
+        this.quizAdmin = quizAdmin;
     }
 
     addPlayer(player: Player) {
