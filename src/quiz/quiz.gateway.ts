@@ -4,6 +4,7 @@ import { Server, Socket } from 'socket.io';
 import { LlmService } from '../llm/llm.service';
 import { QuizManager, QuizStatus } from './managers/quiz.manager';
 import { Quiz } from './entities/quiz.entity';
+import { SocketConfigSingleton } from './config/socket-config.singleton';
 
 @WebSocketGateway({
   cors: {
@@ -11,7 +12,12 @@ import { Quiz } from './entities/quiz.entity';
   },
 })
 export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
-  constructor(private readonly quizService: QuizService, private readonly llmService: LlmService) {}
+  private socketConfig: SocketConfigSingleton;
+
+  constructor(private readonly quizService: QuizService, private readonly llmService: LlmService) {
+    // Obtém a instância singleton da configuração do socket
+    this.socketConfig = SocketConfigSingleton.getInstance();
+  }
 
   private quizManagers = new Map<string, QuizManager>(); // Associa salas aos QuizManagers
   private quizRooms = new Map<string, Quiz>(); // Associa um quiz a um room
@@ -21,22 +27,33 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   @WebSocketServer()
   server: Server;
 
+  /**
+   * Método chamado quando o servidor WebSocket é inicializado
+   */
+  afterInit(server: Server) {
+    // Configura o servidor no singleton
+    this.socketConfig.setServer(server);
+    console.log('QuizGateway inicializado e configurado no singleton');
+  }
+
   handleConnection(socket: Socket) {
     console.log(`Usuário conectado - Socket ID: ${socket.id}`);
     
-    // Log the total number of connected clients
-    const totalConnections = this.server.sockets.sockets.size;
-    console.log(`Total de conexões ativas: ${totalConnections}`);
+    // Usa o singleton para obter estatísticas
+    const stats = this.socketConfig.getServerStats();
+    console.log(`Total de conexões ativas: ${stats.totalConnections}`);
 
-    const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
-        .filter(room => !this.server.sockets.adapter.sids.has(room));
+    // Usa o singleton para obter salas ativas
+    const rooms = this.socketConfig.getActiveRooms();
     socket.emit('list_rooms', { rooms });
   }
 
   handleDisconnect(socket: Socket) {
     console.log(`Usuário desconectado: Socket ID: ${socket.id}`);
-    const totalConnections = this.server.sockets.sockets.size;
-    console.log(`Total de conexões ativas: ${totalConnections}`);
+    
+    // Usa o singleton para obter estatísticas
+    const stats = this.socketConfig.getServerStats();
+    console.log(`Total de conexões ativas: ${stats.totalConnections}`);
 
     this.quizManagers.forEach((quizManager, roomId) => {
       const disconnectedPlayer = quizManager.listPlayers().find(player => player.socketId === socket.id);
@@ -47,8 +64,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
         // Remover jogador do quizManager
         quizManager.removePlayer(socket.id);
 
-        // Emitir lista atualizada de jogadores para a sala
-        this.server.to(roomId).emit("players_on_room", quizManager.listPlayers());
+        // Usa o singleton para emitir evento
+        this.socketConfig.emitToRoom(roomId, "players_on_room", quizManager.listPlayers());
 
         console.log(`Lista de jogadores na sala ${roomId} atualizada: ${quizManager.listPlayers().length} jogadores restantes.`);
 
@@ -68,13 +85,15 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
 
   @SubscribeMessage('for_all_msg')
   handleEventForAll(@MessageBody() body: any) {
-    this.server.emit("log", {mensagem: body})
+    // Usa o singleton para emitir para todos
+    this.socketConfig.emitToAll("log", {mensagem: body});
   }
 
   @SubscribeMessage('room_msg')
   handleEventRoomOnly(@MessageBody() data: { roomId: string; message: string }) {
     const { roomId, message } = data;
-    this.server.to(roomId).emit("log", message);
+    // Usa o singleton para emitir para a sala
+    this.socketConfig.emitToRoom(roomId, "log", message);
   }
 
   // --- END SOCKET.IO MSGS ---
@@ -94,9 +113,9 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     // TODO: Envia os meta-dados do quiz para o front: Tema e Código da sala
     client.emit("quiz_info", {quizTheme: quiz.theme, roomId: roomId}); //So deve rodar quando o quiz estiver pronto.
 
-    const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
-    .filter(roomId => !this.server.sockets.adapter.sids.has(roomId)); // Exclude individual socket IDs
-    this.server.emit("list_rooms", { rooms });
+    // Usa o singleton para obter salas ativas e emitir
+    const rooms = this.socketConfig.getActiveRooms();
+    this.socketConfig.emitToAll("list_rooms", { rooms });
   }
 
   @SubscribeMessage('join_room')
@@ -108,10 +127,10 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
       client.join(roomName); //Adicionar o usuário na sala socket
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
       this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username, answers: [], score: 0 });
-      this.server.to(roomName).emit("quiz_status", this.quizManagers.get(roomName)?.quizStatus);
+      this.socketConfig.emitToRoom(roomName, "quiz_status", this.quizManagers.get(roomName)?.quizStatus);
       client.emit("quiz_admin", this.quizManagers.get(roomName)?.quizAdmin) // Envia o nome do criador do quiz. 
       console.log('quizManager: ', this.quizManagers.get(roomName));
-      this.server.to(roomName).emit("log", { mensagem: `${client.id} joined room ${roomName}!` });
+      this.socketConfig.emitToRoom(roomName, "log", { mensagem: `${client.id} joined room ${roomName}!` });
     }
     else{
       client.emit("log", { mensagem: `Room ${roomName} dosn't exists. Cannot join.` });
@@ -127,7 +146,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const quizManager = this.quizManagers.get(roomId)
     if (quizManager)
       //console.log(`SERVIDOR: Lista de jogadores na sala: ${JSON.stringify(quizManager.listPlayers(), null, 2)}`);
-      this.server.to(roomId).emit("players_on_room", quizManager?.listPlayers() );
+      this.socketConfig.emitToRoom(roomId, "players_on_room", quizManager?.listPlayers());
   }
 
   @SubscribeMessage('check_if_room_exists')
@@ -135,7 +154,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     console.log(`Verificando se a sala ${roomId} existe...`);
     const roomExists = this.quizRooms.has(roomId);
     console.log(roomExists);
-    this.server.emit('room_exists', roomExists);
+    this.socketConfig.emitToAll('room_exists', roomExists);
   }
 
   @SubscribeMessage('start_quiz')
@@ -143,7 +162,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     console.log('Cliente pedindo Quiz para a sala: ', roomId);
     const quiz = this.quizManagers.get(roomId)?.quiz;
     if (quiz) {
-      this.server.to(roomId).emit("send_quiz", quiz);
+      this.socketConfig.emitToRoom(roomId, "send_quiz", quiz);
     } else {
       console.log(`SERVIDOR: QuizManager não encontrado para a sala ${roomId}`);
     }
@@ -171,7 +190,7 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   handleEventChangeQuizStatus(@MessageBody() data: { roomId: string, quizStatus: QuizStatus }){
     const { roomId, quizStatus } = data;
     this.quizManagers.get(roomId)?.changeQuizStatus(quizStatus);
-    this.server.to(roomId).emit("new_quiz_status", this.quizManagers.get(roomId)?.quizStatus);
+    this.socketConfig.emitToRoom(roomId, "new_quiz_status", this.quizManagers.get(roomId)?.quizStatus);
     console.log('quizManager: ', this.quizManagers.get(roomId)); //Verificação do manager da sala
   }
 
@@ -251,14 +270,14 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   handleEventNextQuestion(@MessageBody() data: { roomId: string, currentQuestion: number }) {
     const { roomId, currentQuestion } = data;
     this.quizManagers.get(roomId)?.setQuestionIndex(currentQuestion + 1);
-    this.server.to(roomId).emit("new_current_question", currentQuestion + 1);
+    this.socketConfig.emitToRoom(roomId, "new_current_question", currentQuestion + 1);
   }
 
   @SubscribeMessage('get_scoreboard')
   handleEventGetScoreboard(@MessageBody() data: { roomId: string}) {
     const { roomId } = data;
     const scoreboard = this.quizManagers.get(roomId)?.getScoreboard();
-    this.server.to(roomId).emit("scoreboard", scoreboard);
+    this.socketConfig.emitToRoom(roomId, "scoreboard", scoreboard);
   }
 
 }
