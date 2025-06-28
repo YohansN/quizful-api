@@ -6,6 +6,7 @@ import { QuizManager, QuizStatus } from './managers/quiz.manager';
 import { Quiz } from './entities/quiz.entity';
 import { QuizRepository } from './quiz.repository';
 import { UserService } from '../user/user.service';
+import { QuizParticipationService } from './quiz-participation.service';
 
 @WebSocketGateway({
   cors: {
@@ -17,7 +18,8 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     private readonly quizService: QuizService, 
     private readonly llmService: LlmService,
     private readonly quizRepository: QuizRepository,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly participationService: QuizParticipationService
   ) {}
 
   private quizManagers = new Map<string, QuizManager>(); // Associa salas aos QuizManagers
@@ -107,12 +109,24 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   }
 
   @SubscribeMessage('join_room')
-  handleEventJoinRoom(@MessageBody() data:{ roomName: string, username: string, userId: string } , @ConnectedSocket() client: Socket) {
+  async handleEventJoinRoom(@MessageBody() data:{ roomName: string, username: string, userId: string } , @ConnectedSocket() client: Socket) {
     //const roomExists = this.server.sockets.adapter.rooms.has(roomName);
     const { roomName, username, userId } = data;
     const roomExists = this.quizRooms.get(roomName);
     if (roomExists) {
       client.join(roomName); //Adicionar o usuário na sala socket
+      
+      // Registrar participação no banco de dados
+      try {
+        const quizRecord = await this.quizRepository.findQuizByRoomId(roomName);
+        if (quizRecord) {
+          await this.participationService.joinQuiz(userId, quizRecord.id);
+          console.log(`Participação registrada para usuário ${username} no quiz ${roomName}`);
+        }
+      } catch (error) {
+        console.error('Erro ao registrar participação:', error);
+      }
+      
       // MUDAR PARA RECEBER INFORMAÇÕES DO PLAYER DO FRONT E INSTANCIAR UM PLAYER AQUI E DEPOIS ADICIONAR ELE.
       this.quizManagers.get(roomName)?.addPlayer({ socketId: client.id, id: userId, name: username, answers: [], score: 0 });
       this.server.to(roomName).emit("quiz_status", this.quizManagers.get(roomName)?.quizStatus);
@@ -175,11 +189,56 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
   }
 
   @SubscribeMessage('change_quiz_status')
-  handleEventChangeQuizStatus(@MessageBody() data: { roomId: string, quizStatus: QuizStatus }){
+  async handleEventChangeQuizStatus(@MessageBody() data: { roomId: string, quizStatus: QuizStatus }){
     const { roomId, quizStatus } = data;
     this.quizManagers.get(roomId)?.changeQuizStatus(quizStatus);
     this.server.to(roomId).emit("new_quiz_status", this.quizManagers.get(roomId)?.quizStatus);
     console.log('quizManager: ', this.quizManagers.get(roomId)); //Verificação do manager da sala
+
+    // Se o quiz terminou, salvar as respostas e pontuação final de todos os jogadores
+    if (quizStatus === QuizStatus.QuizEnded) {
+      await this.saveQuizResults(roomId);
+    }
+  }
+
+  private async saveQuizResults(roomId: string) {
+    const manager = this.quizManagers.get(roomId);
+    if (!manager) {
+      console.error(`QuizManager não encontrado para a sala ${roomId}`);
+      return;
+    }
+
+    const quizRecord = await this.quizRepository.findQuizByRoomId(roomId);
+    if (!quizRecord) {
+      console.error(`Quiz não encontrado no banco para a sala ${roomId}`);
+      return;
+    }
+
+    const players = manager.listPlayers();
+    console.log(`Salvando resultados finais para ${players.length} jogadores na sala ${roomId}`);
+
+    for (const player of players) {
+      try {
+        // Buscar o usuário pelo ID para obter o userId correto
+        const user = await this.userService.findOneById(player.id);
+        if (!user) {
+          console.error(`Usuário não encontrado para o player ${player.name}`);
+          continue;
+        }
+
+        // Salvar as respostas e pontuação final
+        await this.participationService.finishQuiz(
+          user.id,
+          quizRecord.id,
+          player.score,
+          player.answers
+        );
+
+        console.log(`Resultados salvos para ${player.name}: ${player.score} pontos`);
+      } catch (error) {
+        console.error(`Erro ao salvar resultados para ${player.name}:`, error);
+      }
+    }
   }
 
   @SubscribeMessage('current_question') // Para atualizar a questão atual apenas para jogadores que recarregarem a página.
