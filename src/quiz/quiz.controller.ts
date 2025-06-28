@@ -10,11 +10,6 @@ export class QuizController {
         return this.quizService.generateQuiz(theme, questionNumber, userId);
     }
 
-    @Get('user/:userId')
-    getQuizzesByUserId(@Param('userId') userId: string) {
-        return this.quizService.getQuizzesByUserId(userId);
-    }
-
     @Get('room/:roomId')
     getQuizWithCreator(@Param('roomId') roomId: string) {
         return this.quizService.getQuizWithCreator(roomId);
