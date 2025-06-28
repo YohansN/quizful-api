@@ -16,4 +16,12 @@ export class QuizService {
     console.log(quiz); 
     return quiz;
   }
+
+  async getQuizzesByUserId(userId: string) {
+    return await this.QuizRepository.findQuizzesByUserId(userId);
+  }
+
+  async getQuizWithCreator(roomId: string) {
+    return await this.QuizRepository.findQuizWithCreator(roomId);
+  }
 }

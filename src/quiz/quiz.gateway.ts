@@ -4,6 +4,8 @@ import { Server, Socket } from 'socket.io';
 import { LlmService } from '../llm/llm.service';
 import { QuizManager, QuizStatus } from './managers/quiz.manager';
 import { Quiz } from './entities/quiz.entity';
+import { QuizRepository } from './quiz.repository';
+import { UserService } from '../user/user.service';
 
 @WebSocketGateway({
   cors: {
@@ -11,7 +13,12 @@ import { Quiz } from './entities/quiz.entity';
   },
 })
 export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
-  constructor(private readonly quizService: QuizService, private readonly llmService: LlmService) {}
+  constructor(
+    private readonly quizService: QuizService, 
+    private readonly llmService: LlmService,
+    private readonly quizRepository: QuizRepository,
+    private readonly userService: UserService
+  ) {}
 
   private quizManagers = new Map<string, QuizManager>(); // Associa salas aos QuizManagers
   private quizRooms = new Map<string, Quiz>(); // Associa um quiz a um room
@@ -89,9 +96,9 @@ export class QuizGateway implements OnGatewayConnection, OnGatewayDisconnect{
     const roomId = `quiz-${Date.now()}`; // TODO: Melhorar a geração de ID para ser menor.
 
     this.quizRooms.set(roomId, quiz); //Save the quiz associate w/ the room
-    this.quizManagers.set(roomId, new QuizManager(roomId, quiz, quizAdmin));
+    this.quizManagers.set(roomId, new QuizManager(roomId, quiz, quizAdmin, this.quizRepository, this.userService));
     console.log(`SERVIDOR: Room criada com id: ${roomId}`);
-    // TODO: Envia os meta-dados do quiz para o front: Tema e Código da sala
+    // Envia os meta-dados do quiz para o front: Tema e Código da sala
     client.emit("quiz_info", {quizTheme: quiz.theme, roomId: roomId}); //So deve rodar quando o quiz estiver pronto.
 
     const rooms = Array.from(this.server.sockets.adapter.rooms.keys())
