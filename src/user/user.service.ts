@@ -3,10 +3,14 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 import { UserRepository } from './user.repository';
+import { QuizParticipationService } from '../quiz/quiz-participation.service';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly userRepository : UserRepository) {}
+  constructor(
+    private readonly userRepository : UserRepository,
+    private readonly participationService: QuizParticipationService
+  ) {}
 
   async create(createUserDto: CreateUserDto) {
     await this.userRepository.findUserByEmail(createUserDto.email).then((user) => {
@@ -33,6 +37,22 @@ export class UserService {
 
   findOneByUsername(username: string) {
     return this.userRepository.findUserByUsername(username);
+  }
+
+  async getUserStats(userId: string) {
+    return await this.participationService.getUserStats(userId);
+  }
+
+  async getUserParticipations(userId: string) {
+    return await this.participationService.getUserParticipations(userId);
+  }
+
+  async getUserAccuracyRate(userId: string) {
+    return await this.participationService.getUserAccuracyRate(userId);
+  }
+
+  async getUserQuizzes(userId: string) {
+    return await this.participationService.getUserQuizzes(userId);
   }
 
   // update(id: number, updateUserDto: UpdateUserDto) {

@@ -35,6 +35,42 @@ export class UserController {
     return this.userService.findOneById(id);
   }
 
+  @Get(':id/stats')
+  async getUserStats(@Param('id') id: string) {
+    const stats = await this.userService.getUserStats(id);
+    return {
+      userId: id,
+      stats,
+    };
+  }
+
+  @Get(':id/participations') //Quizzes que o usuário participou
+  async getUserParticipations(@Param('id') id: string) {
+    const participations = await this.userService.getUserParticipations(id);
+    return {
+      userId: id,
+      participations,
+    };
+  }
+
+  @Get(':id/accuracy')
+  async getUserAccuracyRate(@Param('id') id: string) {
+    const accuracy = await this.userService.getUserAccuracyRate(id);
+    return {
+      userId: id,
+      accuracy,
+    };
+  }
+
+  @Get(':id/quizzes') // Quizzes criados pelo usuário
+  async getUserQuizzes(@Param('id') id: string) {
+    const quizzes = await this.userService.getUserQuizzes(id);
+    return {
+      userId: id,
+      quizzes,
+    };
+  }
+
   // @Patch(':id')
   // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
   //   return this.userService.update(+id, updateUserDto);
