@@ -81,9 +81,9 @@ export class QuizParticipationRepository {
         });
     }
 
-    async getUserParticipationStats(userId: string) {
+    async getUserParticipationStats(username: string) {
         const participations = await this.PrismaService.quizParticipation.findMany({
-            where: { userId },
+            where: { user: { username } },
             select: {
                 score: true,
                 finishedAt: true,

@@ -35,11 +35,11 @@ export class UserController {
     return this.userService.findOneById(id);
   }
 
-  @Get(':id/stats')
-  async getUserStats(@Param('id') id: string) {
-    const stats = await this.userService.getUserStats(id);
+  @Get(':username/stats')
+  async getUserStats(@Param('username') username: string) {
+    const stats = await this.userService.getUserStats(username);
     return {
-      userId: id,
+      user: username,
       stats,
     };
   }

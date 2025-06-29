@@ -39,8 +39,8 @@ export class UserService {
     return this.userRepository.findUserByUsername(username);
   }
 
-  async getUserStats(userId: string) {
-    return await this.participationService.getUserStats(userId);
+  async getUserStats(username: string) {
+    return await this.participationService.getUserStats(username);
   }
 
   async getUserParticipations(userId: string) {

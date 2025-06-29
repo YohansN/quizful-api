@@ -29,8 +29,8 @@ export class QuizParticipationService {
         return await this.participationRepository.getUserParticipations(userId);
     }
 
-    async getUserStats(userId: string) {
-        return await this.participationRepository.getUserParticipationStats(userId);
+    async getUserStats(username: string) {
+        return await this.participationRepository.getUserParticipationStats(username);
     }
 
     async getUserAccuracyRate(userId: string) {
