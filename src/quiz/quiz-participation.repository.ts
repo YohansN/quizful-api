@@ -58,23 +58,21 @@ export class QuizParticipationRepository {
         });
     }
 
-    async getUserParticipations(userId: string) {
+    async getUserParticipationsWithCreator(userId: string) { //Retorna uma lista de todos os quizzes que o usuario participou.
         return await this.PrismaService.quizParticipation.findMany({
             where: { userId },
             include: {
                 quiz: {
                     select: {
-                        id: true,
-                        roomId: true,
                         theme: true,
                         numberOfQuestions: true,
                         createdAt: true,
-                        User: {
+                        User: { // Criador do quiz
                             select: {
                                 username: true,
-                            },
-                        },
-                    },
+                            }
+                        }
+                    }
                 },
             },
             orderBy: { joinedAt: 'desc' },

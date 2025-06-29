@@ -26,7 +26,17 @@ export class QuizParticipationService {
     }
 
     async getUserParticipations(userId: string) {
-        return await this.participationRepository.getUserParticipations(userId);
+        // return await this.participationRepository.getUserParticipationsWithCreator(userId);
+
+        const participations = await this.participationRepository.getUserParticipationsWithCreator(userId);
+        const quizzes = participations.map(p => ({
+            theme: p.quiz.theme,
+            numberOfQuestions: p.quiz.numberOfQuestions,
+            createdAt: p.quiz.createdAt,
+            createdByUser: p.quiz.User.username,
+        }));
+        return quizzes;
+
     }
 
     async getUserStats(username: string) {
