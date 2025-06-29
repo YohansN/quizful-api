@@ -26,13 +26,59 @@ export class UserController {
   }
 
   @Get('email')
-  findOneByEmail(@Query('email') id: string) {
-    return this.userService.findOneByEmail(id);
+  findOneByEmailQuery(@Query('email') email: string) {
+    return this.userService.findOneByEmail(email);
   }
 
-  @Get(':id')
+  @Get('email/:email')
+  findOneByEmailParam(@Param('email') email: string) {
+    return this.userService.findOneByEmail(email);
+  }
+
+  @Get(':username')
+  findOneByUsername(@Param('username') username: string) {
+    return this.userService.findOneByUsername(username);
+  }
+  
+  @Get('id/:id')
   findOneById(@Param('id') id: string) {
     return this.userService.findOneById(id);
+  }
+
+  @Get(':username/stats')
+  async getUserStats(@Param('username') username: string) {
+    const stats = await this.userService.getUserStats(username);
+    return {
+      user: username,
+      stats,
+    };
+  }
+
+  @Get(':id/participations') //Quizzes que o usuário participou
+  async getUserParticipations(@Param('id') id: string) {
+    const participations = await this.userService.getUserParticipations(id);
+    return {
+      userId: id,
+      participations,
+    };
+  }
+
+  @Get(':id/accuracy')
+  async getUserAccuracyRate(@Param('id') id: string) {
+    const accuracy = await this.userService.getUserAccuracyRate(id);
+    return {
+      userId: id,
+      accuracy,
+    };
+  }
+
+  @Get(':id/quizzes') // Quizzes criados pelo usuário
+  async getUserQuizzes(@Param('id') id: string) {
+    const quizzes = await this.userService.getUserQuizzes(id);
+    return {
+      userId: id,
+      quizzes,
+    };
   }
 
   // @Patch(':id')

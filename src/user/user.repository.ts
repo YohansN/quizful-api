@@ -36,6 +36,13 @@ export class UserRepository{
         return user;
     }
 
+    async findUserByUsername(username: string) {
+        const user = await this.PrismaService.user.findFirst({
+        where: { username },
+        });
+        return user;
+    }
+
     async deleteUser(id: string) {
         await this.PrismaService.user.delete({
         where: { id },

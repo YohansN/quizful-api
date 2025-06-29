@@ -1,4 +1,6 @@
 import { Quiz } from "../entities/quiz.entity";
+import { QuizRepository } from "../quiz.repository";
+import { UserService } from "../../user/user.service";
 
 export enum QuizStatus {
     WaitingForPlayersToJoinQuiz,
@@ -28,11 +30,38 @@ export class QuizManager {
     quiz: Quiz;
     quizAdmin: string = ""; //username do criador do quiz
 
-    constructor(roomId: string, quiz: Quiz, quizAdmin: string) {
+    constructor(
+        roomId: string, 
+        quiz: Quiz, 
+        quizAdmin: string,
+        private readonly quizRepository: QuizRepository,
+        private readonly userService: UserService
+    ) {
         this.roomId = roomId;
         this.quizStatus = QuizStatus.WaitingForPlayersToJoinQuiz;
         this.quiz = quiz;
         this.quizAdmin = quizAdmin;
+        
+        // Salvar o quiz no banco de dados
+        this.saveQuizToDatabase();
+    }
+
+    private async saveQuizToDatabase() {
+        try {
+            // Buscar o usuário pelo username (quizAdmin)
+            const user = await this.userService.findOneByUsername(this.quizAdmin);
+            
+            if (!user) {
+                console.error(`Usuário ${this.quizAdmin} não encontrado para salvar o quiz`);
+                return;
+            }
+
+            // Salvar o quiz no banco de dados
+            await this.quizRepository.saveQuiz(this.roomId, this.quiz, user.id);
+            console.log(`Quiz salvo no banco de dados com roomId: ${this.roomId}`);
+        } catch (error) {
+            console.error('Erro ao salvar quiz no banco de dados:', error);
+        }
     }
 
     addPlayer(player: Player) {
